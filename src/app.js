@@ -9,6 +9,7 @@ const healthRoutes = require("./routes/healthRoutes");
 const progressRoutes = require("./routes/progressRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const { errorHandler, notFound } = require("./middleware/errorMiddleware");
+const executeRoutes = require("./routes/execute.routes");
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use((req, res, next) => {
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   next();
 });
+
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 const normalizeOrigin = (origin) => origin?.trim().replace(/\/+$/, "");
@@ -115,6 +117,7 @@ app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/execute", executeRoutes);
 
 // ─── Error handlers ──────────────────────────────────────────────────────────
 app.use(notFound);

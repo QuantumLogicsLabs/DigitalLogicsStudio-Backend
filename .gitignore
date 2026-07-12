@@ -29,3 +29,5 @@ Thumbs.db
 .txtconfig
 .txtignore
 backend.txt
+bin/
+tmp/
