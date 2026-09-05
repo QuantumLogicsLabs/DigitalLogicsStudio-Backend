@@ -9,6 +9,9 @@ const {
   verifyResetOtp,
   resetPassword,
   updateNotificationPreferences,
+  updateProfile,
+  changePassword,
+  deleteAccount,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
 
@@ -190,6 +193,155 @@ router.post("/logout", logoutUser);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/me", protect, getCurrentUser);
+
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   patch:
+ *     summary: Update the current user's display name and/or avatar
+ *     tags: [Auth]
+ *     description: >
+ *       Requires `protect`. Both fields are optional, but at least one must
+ *       be provided. `avatarDataUrl` must be a base64 `data:image/...` URL;
+ *       send `avatarDataUrl: null` to remove the current photo. This route
+ *       is mounted with a raised (~8MB) JSON body limit — see src/app.js —
+ *       specifically to accommodate base64-encoded photos; every other
+ *       route keeps the default 10kb limit.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 60
+ *                 example: Ada Lovelace
+ *               avatarDataUrl:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Base64 image data URL, or null to remove the photo.
+ *                 example: "data:image/png;base64,iVBORw0KGgoAAAANS..."
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error (name length, malformed/oversized avatar)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       413:
+ *         description: Request body exceeded the route's body-size limit
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.patch("/profile", protect, updateProfile);
+
+/**
+ * @swagger
+ * /api/auth/change-password:
+ *   patch:
+ *     summary: Change the current user's password while logged in
+ *     tags: [Auth]
+ *     description: >
+ *       Requires `protect` and re-verification of the current password —
+ *       distinct from the unauthenticated OTP-based /forgot-password flow.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword]
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         description: Missing fields, too-short new password, or new password same as current
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Not authenticated, or current password incorrect
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.patch("/change-password", protect, changePassword);
+
+/**
+ * @swagger
+ * /api/auth/delete-account:
+ *   post:
+ *     summary: Permanently delete the current user's account
+ *     tags: [Auth]
+ *     description: >
+ *       Requires `protect` and password confirmation. Cascades to delete the
+ *       user's `UserProgress` document and any `EmailQueue` rows, then
+ *       clears the auth cookie. Irreversible.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [password]
+ *             properties:
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Account and associated data deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         description: Missing password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Not authenticated, or password incorrect
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post("/delete-account", protect, deleteAccount);
 
 /**
  * @swagger

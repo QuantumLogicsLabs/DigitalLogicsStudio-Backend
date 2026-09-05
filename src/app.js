@@ -22,6 +22,15 @@ const app = express();
 app.set("trust proxy", 1);
 
 // ─── Body parsers ────────────────────────────────────────────────────────────
+// NEW: PATCH /api/auth/profile accepts a base64 avatar image, which blows
+// past the default 10kb limit (a 5MB photo — the frontend's own cap — is
+// ~6.7MB once base64-encoded). Rather than raising the limit for the whole
+// API, we mount a path-scoped parser with a larger limit *before* the
+// general one. body-parser skips re-parsing a request whose body has
+// already been read (`req._body`), so this only affects this one route —
+// every other route still gets the strict 10kb ceiling from SECURITY.md.
+app.use("/api/auth/profile", express.json({ limit: "8mb" }));
+
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());

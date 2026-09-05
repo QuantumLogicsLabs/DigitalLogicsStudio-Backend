@@ -8,6 +8,9 @@
 > `localStorage` plus JSON file export/import — and is **not** persisted through this
 > backend at all. This revision also adds the `Problem`, `UserProgress`, and `EmailQueue`
 > collections, which exist in the codebase but weren't documented before.
+>
+> **Update:** `User` gained an `avatarUrl` field, written by the newly-mounted
+> `PATCH /api/auth/profile` endpoint — see "User Collection" below and `AUTH_FLOW.md`.
 
 The backend uses five MongoDB collections: `users`, `userprogresses`, `problems`,
 `savedcircuits`, and `emailqueues`.
@@ -26,6 +29,7 @@ request — the schema below is the *current*, slimmed-down shape.
   email: String,
   password: String,          // select: false
   role: String,               // "student" | "instructor" | "admin", default "student"
+  avatarUrl: String,          // base64 data URL, or null — see note below
   solvedProblems: [Number],   // legacy flat array, kept for compatibility
   resetPassword: {            // all fields select: false
     otpHash: String,
@@ -53,9 +57,19 @@ request — the schema below is the *current*, slimmed-down shape.
 | `email` | String | Required, unique, trimmed, lowercase. |
 | `password` | String | Required, min 8, excluded by default with `select: false`. |
 | `role` | String | Enum `student`/`instructor`/`admin`, defaults to `student`. No route currently changes it — see `RBAC_FLOW.md`. |
+| `avatarUrl` | String \| null | Base64 `data:image/...` URL, or `null`. Written only by `PATCH /api/auth/profile`, capped at ~7MB of encoded text server-side. Stored inline rather than in object storage/a CDN — see "Avatar Storage" note below. |
 | `solvedProblems` | Number array | Legacy flat array kept for compatibility with frontend auth state. |
 | `resetPassword.*` | — | OTP hash/expiry/attempts and reset-token hash/expiry for the forgot-password flow. All `select: false`. |
 | `notifications.*` | — | Idempotency guards + opt-out flag for the email notification system (see `EMAIL_NOTIFICATIONS.md`). |
+
+### Avatar Storage Note
+
+There is no file-storage/CDN integration in this project. Storing a base64 image
+directly on the `User` document is a pragmatic choice for the current traffic level
+(<10 visitors/hour per `EMAIL_NOTIFICATIONS.md`), not a long-term architecture decision.
+If this ever needs to change: move to object storage (S3/R2/Cloudinary/etc.), store only
+a URL on `avatarUrl`, and drop the inline 8MB body-size carve-out in `src/app.js` for
+`/api/auth/profile` since uploads would then go straight to the storage provider.
 
 ## Password Storage
 
