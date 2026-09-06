@@ -260,12 +260,14 @@ router.patch("/profile", protect, updateProfile);
 /**
  * @swagger
  * /api/auth/change-password:
- *   patch:
+ *   post:
  *     summary: Change the current user's password while logged in
  *     tags: [Auth]
  *     description: >
  *       Requires `protect` and re-verification of the current password —
  *       distinct from the unauthenticated OTP-based /forgot-password flow.
+ *       POST rather than PATCH to match the frontend's existing
+ *       `authService.changePassword()` call.
  *     requestBody:
  *       required: true
  *       content:
@@ -299,18 +301,21 @@ router.patch("/profile", protect, updateProfile);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.patch("/change-password", protect, changePassword);
+router.post("/change-password", protect, changePassword);
 
 /**
  * @swagger
- * /api/auth/delete-account:
- *   post:
+ * /api/auth/account:
+ *   delete:
  *     summary: Permanently delete the current user's account
  *     tags: [Auth]
  *     description: >
  *       Requires `protect` and password confirmation. Cascades to delete the
  *       user's `UserProgress` document and any `EmailQueue` rows, then
- *       clears the auth cookie. Irreversible.
+ *       clears the auth cookie. Irreversible. DELETE /account rather than
+ *       POST /delete-account to match the frontend's existing
+ *       `authService.deleteAccount()` call, which sends the password as a
+ *       DELETE request body via axios's `{ data: {...} }` option.
  *     requestBody:
  *       required: true
  *       content:
@@ -341,7 +346,7 @@ router.patch("/change-password", protect, changePassword);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post("/delete-account", protect, deleteAccount);
+router.delete("/account", protect, deleteAccount);
 
 /**
  * @swagger

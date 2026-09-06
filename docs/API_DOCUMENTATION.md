@@ -230,10 +230,11 @@ Validation:
   is wired up yet) — a pragmatic choice at current traffic levels, not a permanent
   architecture decision. See `DATABASE_SCHEMA.md`.
 
-### `PATCH /api/auth/change-password` — Implemented
+### `POST /api/auth/change-password` — Implemented
 
 Requires `protect`. Distinct from the OTP-based `/forgot-password` flow below — this is
-for a user who is already logged in and knows their current password.
+for a user who is already logged in and knows their current password. POST rather than
+PATCH to match `authService.changePassword()` on the frontend.
 
 Request: `{ "currentPassword": "correcthorse", "newPassword": "newSecret123" }`
 
@@ -250,11 +251,13 @@ Error `400`: missing fields, new password under 8 characters, or new password id
 to the current one.
 Error `401`: not authenticated, or `currentPassword` doesn't match.
 
-### `POST /api/auth/delete-account` — Implemented
+### `DELETE /api/auth/account` — Implemented
 
 Requires `protect` and password confirmation. Cascades: deletes the user's
 `UserProgress` document and any `EmailQueue` rows referencing them, deletes the `User`
-document, then clears the auth cookie. Irreversible.
+document, then clears the auth cookie. Irreversible. `DELETE /account` rather than
+`POST /delete-account` to match `authService.deleteAccount()`, which sends the password
+in the DELETE request body via axios's `{ data: {...} }` option.
 
 Request: `{ "password": "correcthorse" }`
 

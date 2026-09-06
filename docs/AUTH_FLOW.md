@@ -73,8 +73,9 @@ average document size becomes a concern.
 
 ## Change Password Flow (While Logged In) — Implemented
 
-**`PATCH /api/auth/change-password`** — requires `protect`. Body:
-`{ currentPassword, newPassword }`.
+**`POST /api/auth/change-password`** — requires `protect`. Body:
+`{ currentPassword, newPassword }`. POST (not PATCH) to match the frontend's
+`authService.changePassword()`.
 
 1. Validates both fields are present and `newPassword` is at least 8 characters.
 2. Rejects if `newPassword === currentPassword`.
@@ -88,7 +89,8 @@ exists for users who can't log in at all.
 
 ## Delete Account Flow — Implemented
 
-**`POST /api/auth/delete-account`** — requires `protect`. Body: `{ password }`.
+**`DELETE /api/auth/account`** — requires `protect`. Body: `{ password }`, sent as a
+DELETE request body (axios `{ data: {...} }`) to match `authService.deleteAccount()`.
 
 1. Requires the current password as confirmation; re-verifies it the same way as
    `change-password`.
