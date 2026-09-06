@@ -10,7 +10,7 @@ const progressRoutes = require("./routes/progressRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const internalRoutes = require("./routes/internalRoutes");
 const circuitRoutes = require("./routes/circuitRoutes");
-const problemRoutes = require("./routes/problemRoutes");
+const customComponentRoutes = require("./routes/customComponentRoutes");
 
 const { errorHandler, notFound } = require("./middleware/errorMiddleware");
 
@@ -130,7 +130,8 @@ app.use("/api/progress", progressRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/internal", internalRoutes);
 app.use("/api/trainer-board", circuitRoutes);
-app.use("/api/problems", problemRoutes);
+app.use("/api/custom-components", customComponentRoutes);
+
 
 // ─── Error handlers ──────────────────────────────────────────────────────────
 app.use(notFound);
