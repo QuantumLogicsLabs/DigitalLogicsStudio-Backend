@@ -10,8 +10,15 @@ All API responses are JSON. Successful responses include `success: true`; errors
 > **This revision adds** the password-reset flow, notification toggle, Problems CRUD,
 > Trainer Board circuits, AI assistant, and Internal endpoint groups, none of which were
 > documented here before even though they're implemented. It also flags which of these
-> are actually used by the frontend today. For the generated, always-current version of
-> this reference, use Swagger at `/api/docs`.
+> are actually used by the frontend today.
+>
+> **Update:** `PATCH /api/auth/profile`, `PATCH /api/auth/change-password`, and
+> `POST /api/auth/delete-account` are now implemented **and** routed — they previously
+> existed only as unmounted controller functions (`changePassword`/`deleteAccount`) or
+> didn't exist at all (`updateProfile`). See "Auth Endpoints" below.
+>
+> For the generated, always-current version of this reference, use Swagger at
+> `/api/docs`.
 
 ## Authentication Model
 
@@ -92,6 +99,7 @@ Response `201`:
     "name": "Ada Lovelace",
     "email": "ada@example.com",
     "role": "student",
+    "avatarUrl": null,
     "solvedProblems": [],
     "createdAt": "2026-05-29T10:00:00.000Z",
     "emailNotificationsOptedOut": false
@@ -131,6 +139,7 @@ Response `200`:
     "name": "Ada Lovelace",
     "email": "ada@example.com",
     "role": "student",
+    "avatarUrl": null,
     "solvedProblems": [1, 7],
     "createdAt": "2026-05-29T10:00:00.000Z",
     "emailNotificationsOptedOut": false
@@ -165,6 +174,7 @@ Response `200`:
     "name": "Ada Lovelace",
     "email": "ada@example.com",
     "role": "student",
+    "avatarUrl": null,
     "solvedProblems": [1, 7],
     "createdAt": "2026-05-29T10:00:00.000Z",
     "emailNotificationsOptedOut": false
@@ -180,6 +190,88 @@ Unauthorized response `401`:
   "message": "Not authorized. Please log in."
 }
 ```
+
+### `PATCH /api/auth/profile` — Implemented
+
+Requires `protect`. Updates the display name and/or avatar for the logged-in user. At
+least one of `name` / `avatarDataUrl` must be present.
+
+Request:
+
+```json
+{
+  "name": "Ada Byron",
+  "avatarDataUrl": "data:image/png;base64,iVBORw0KGgoAAAANS..."
+}
+```
+
+Send `"avatarDataUrl": null` to remove an existing photo without changing the name.
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "message": "Profile updated.",
+  "user": { "...": "sanitized user, same shape as /me" }
+}
+```
+
+Validation:
+
+- `name`, if present, must be 2–60 characters after trimming.
+- `avatarDataUrl`, if present and non-null, must start with `data:image/` and be under
+  roughly 7MB of encoded text (the frontend itself caps the source file at 5MB, which
+  becomes ~6.7MB once base64-encoded).
+- **Body size:** this route is mounted with an 8MB JSON limit instead of the API's usual
+  10kb limit — see `src/app.js`. Every other route keeps the strict default. A payload
+  over 8MB gets a `413` from the body parser before it reaches validation.
+- Avatars are stored inline on the `User` document as a data URL (no object storage/CDN
+  is wired up yet) — a pragmatic choice at current traffic levels, not a permanent
+  architecture decision. See `DATABASE_SCHEMA.md`.
+
+### `POST /api/auth/change-password` — Implemented
+
+Requires `protect`. Distinct from the OTP-based `/forgot-password` flow below — this is
+for a user who is already logged in and knows their current password. POST rather than
+PATCH to match `authService.changePassword()` on the frontend.
+
+Request: `{ "currentPassword": "correcthorse", "newPassword": "newSecret123" }`
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "message": "Password updated successfully."
+}
+```
+
+Error `400`: missing fields, new password under 8 characters, or new password identical
+to the current one.
+Error `401`: not authenticated, or `currentPassword` doesn't match.
+
+### `DELETE /api/auth/account` — Implemented
+
+Requires `protect` and password confirmation. Cascades: deletes the user's
+`UserProgress` document and any `EmailQueue` rows referencing them, deletes the `User`
+document, then clears the auth cookie. Irreversible. `DELETE /account` rather than
+`POST /delete-account` to match `authService.deleteAccount()`, which sends the password
+in the DELETE request body via axios's `{ data: {...} }` option.
+
+Request: `{ "password": "correcthorse" }`
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "message": "Your account and all associated data have been deleted."
+}
+```
+
+Error `400`: missing password.
+Error `401`: not authenticated, or password incorrect.
 
 ### `POST /api/auth/forgot-password` — Implemented
 
@@ -248,12 +340,6 @@ Response `200`:
 }
 ```
 
-### Not Currently Exposed
-
-`changePassword` and `deleteAccount` are implemented in `authController.js` but have no
-route in `authRoutes.js`. They are not part of the live API today — see `AUTH_FLOW.md`
-if you need to mount them.
-
 ## Progress Endpoints
 
 All progress routes require authentication.
@@ -261,8 +347,6 @@ All progress routes require authentication.
 ### `GET /api/progress` and `GET /api/progress/snapshot`
 
 Returns the complete progress state used by the frontend.
-
-Response:
 
 ```json
 {

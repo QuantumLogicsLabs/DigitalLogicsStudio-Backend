@@ -19,12 +19,20 @@ const {
 } = require("../utils/otp");
 const { sendWelcomeNotification } = require("../services/notificationService");
 
+// Data-URL avatars are stored inline on the User document (see
+// models/User.js for why). This caps the *encoded* string length so a
+// malformed/oversized payload fails with a clear 400 instead of relying
+// solely on the body-parser's 413. Kept a little above the frontend's 5MB
+// raw-file cap to account for base64's ~33% size inflation.
+const MAX_AVATAR_DATA_URL_LENGTH = 7 * 1024 * 1024; // ~7MB of encoded text
+
 function sanitizeUser(user) {
   return {
     id: user._id,
     name: user.name,
     email: user.email,
     role: user.role || "student",
+    avatarUrl: user.avatarUrl || null,
     solvedProblems: user.solvedProblems || [],
     createdAt: user.createdAt,
     emailNotificationsOptedOut: user.notifications?.optedOut || false,
@@ -322,8 +330,57 @@ async function updateNotificationPreferences(req, res, next) {
   }
 }
 
-// NEW — PATCH-equivalent for password, but while already logged in (as
-// opposed to forgotPassword's unauthenticated OTP flow).
+// NEW — PATCH /api/auth/profile. Updates display name and/or avatar for the
+// logged-in user. Both fields are optional but at least one must be
+// present; send `avatarDataUrl: null` to remove an existing photo.
+async function updateProfile(req, res, next) {
+  try {
+    const { name, avatarDataUrl } = req.body || {};
+
+    if (name === undefined && avatarDataUrl === undefined) {
+      throw createHttpError(400, "Provide a name and/or avatarDataUrl to update.");
+    }
+
+    if (name !== undefined) {
+      const trimmed = String(name).trim();
+      if (trimmed.length < 2 || trimmed.length > 60) {
+        throw createHttpError(400, "Name must be between 2 and 60 characters long.");
+      }
+      req.user.name = trimmed;
+    }
+
+    if (avatarDataUrl !== undefined) {
+      if (avatarDataUrl === null) {
+        req.user.avatarUrl = null;
+      } else {
+        const isDataUrl =
+          typeof avatarDataUrl === "string" && avatarDataUrl.startsWith("data:image/");
+
+        if (!isDataUrl) {
+          throw createHttpError(400, "avatarDataUrl must be a base64 image data URL.");
+        }
+        if (avatarDataUrl.length > MAX_AVATAR_DATA_URL_LENGTH) {
+          throw createHttpError(400, "Image is too large. Please choose a smaller photo.");
+        }
+        req.user.avatarUrl = avatarDataUrl;
+      }
+    }
+
+    await req.user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated.",
+      user: sanitizeUser(req.user),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// PATCH-equivalent for password, but while already logged in (as opposed
+// to forgotPassword's unauthenticated OTP flow). Implemented previously,
+// now mounted at PATCH /api/auth/change-password.
 async function changePassword(req, res, next) {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -359,8 +416,9 @@ async function changePassword(req, res, next) {
   }
 }
 
-// NEW — permanently deletes the account and its associated data.
-// Requires the current password as confirmation.
+// Permanently deletes the account and its associated data. Implemented
+// previously, now mounted at POST /api/auth/delete-account. Requires the
+// current password as confirmation.
 async function deleteAccount(req, res, next) {
   try {
     const { password } = req.body;
@@ -401,6 +459,7 @@ module.exports = {
   verifyResetOtp,
   resetPassword,
   updateNotificationPreferences,
+  updateProfile,
   changePassword,
   deleteAccount,
 };

@@ -6,6 +6,12 @@ This project follows a human-readable changelog format. Version numbers should a
 
 ### Added
 
+- `PATCH /api/auth/profile` — update display name and/or avatar (base64 data URL) for
+  the logged-in user. New `User.avatarUrl` field. Mounted with a route-scoped 8MB JSON
+  body limit (`src/app.js`) to accommodate base64-encoded photos without loosening the
+  10kb default limit everywhere else.
+- Mounted `PATCH /api/auth/change-password` and `POST /api/auth/delete-account` —
+  both were already implemented in `authController.js` but had no route.
 - Professional backend documentation set under `docs/`.
 - API, architecture, setup, deployment, database, auth, RBAC, folder structure, contributing, security, and conduct documentation.
 
@@ -29,4 +35,3 @@ This project follows a human-readable changelog format. Version numbers should a
 - User progress endpoints for problems, topics, activity, and snapshots.
 - Swagger UI and OpenAPI JSON endpoints.
 - CORS allowlist and production cross-origin cookie support.
-

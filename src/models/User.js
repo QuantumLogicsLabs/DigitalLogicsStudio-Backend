@@ -37,6 +37,17 @@ const userSchema = new mongoose.Schema(
       default: "student",
     },
 
+    // NEW — profile photo. Stored as a base64 data URL directly on the
+    // document rather than in object storage/CDN: there is no file-storage
+    // integration in this project yet, and at current traffic levels
+    // (<10 visitors/hour) this is a pragmatic trade-off, not a permanent
+    // architecture decision. See docs/AUTH_FLOW.md "Profile Update Flow"
+    // for the size limit enforced on write.
+    avatarUrl: {
+      type: String,
+      default: null,
+    },
+
     // ── Legacy flat array kept for backward compat ──
     // Small enough (array of numbers) that it's cheap to keep on the user
     // doc; the detailed problem records live in UserProgress now.
