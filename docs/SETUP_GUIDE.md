@@ -56,6 +56,22 @@ NODE_ENV=development npm start
 
 The `server.js` entrypoint only calls `app.listen` outside production. In `NODE_ENV=production`, it exports a Vercel-compatible request handler and lazy-connects to MongoDB on first non-OPTIONS request.
 
+## Seeding Data (Optional — Not Required for Setup)
+
+```bash
+npm run seed:problems
+```
+
+This runs `scripts/seedProblems.js`, which idempotently upserts `scripts/seedData/problems.json`
+into the `Problem` collection consumed by `/api/problems`.
+
+**This step is optional and can be skipped for normal local development.** The frontend
+does not currently call `/api/problems` — its problem catalog is sourced elsewhere — so
+an empty `Problem` collection does not affect the app's day-to-day functionality. Run
+this seed script only if you're testing or building directly against the
+`/api/problems` CRUD API. This will change to a required setup step once the frontend is
+switched over to consume this collection; this guide should be updated at that point.
+
 ## Health Checks
 
 ```bash
@@ -80,7 +96,10 @@ After startup, visit:
 - `http://localhost:5000/api/docs`
 - `http://localhost:5000/api/docs.json`
 
-Swagger UI can test cookie-authenticated routes after calling `POST /api/auth/login` from the same API origin.
+Swagger UI can test cookie-authenticated routes after calling `POST /api/auth/login` from the same API origin. The Problems tag (`/api/problems/*`) and the Internal tag
+(`/api/internal/*`) are documented there too — Problems is backend-only for now (see
+above), and Internal routes require a Bearer token equal to `CRON_SECRET` rather than
+the login cookie.
 
 ## Common Setup Problems
 
@@ -90,4 +109,4 @@ Swagger UI can test cookie-authenticated routes after calling `POST /api/auth/lo
 | Browser blocks API call | CORS origin mismatch | Set `CLIENT_URL` to the exact frontend origin. |
 | `/api/auth/me` returns 401 after login in production | Cookie cannot cross origins | Ensure HTTPS, `NODE_ENV=production`, and frontend uses `withCredentials: true`. |
 | Mongo connection timeout | Bad network allowlist or URI | Check MongoDB Atlas IP access, username, password, and database name. |
-
+| `/api/problems` returns an empty list | `Problem` collection hasn't been seeded | Expected — this is fine for normal local dev. Run `npm run seed:problems` only if you need this API populated. |

@@ -1,3 +1,4 @@
+const { getGroqClient, GROQ_DEFAULTS } = require("../config/groq");
 function synthesizeCircuitFromTruthTable(inputs = [], outputs = [], truthTable = []) {
   if (!inputs.length || !outputs.length || !truthTable.length) return null;
   const gates = [], wires = [];

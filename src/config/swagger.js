@@ -157,6 +157,96 @@ const options = {
             },
           },
         },
+        // ── Problem catalog (added: previously undocumented /api/problems routes) ──
+        Problem: {
+          type: "object",
+          description: "A DLD circuit problem or COAL conceptual problem, as returned by the API.",
+          properties: {
+            id: { type: "integer", example: 5, description: "Numeric problem id, unique across the catalog." },
+            listId: { type: "string", example: "DLD-0005", description: "Human-readable catalog id, auto-derived from course + id if not supplied." },
+            course: { type: "string", enum: ["dld", "coal"], example: "dld" },
+            title: { type: "string", example: "Half Adder" },
+            difficulty: { type: "string", enum: ["Easy", "Medium", "Hard"], example: "Easy" },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              example: ["Combinational", "Arithmetic"],
+            },
+            topic: { type: "string", example: "arithmetic-circuits" },
+            description: { type: "string", example: "Build a half adder that outputs Sum and Carry for two 1-bit inputs." },
+            truthTable: {
+              type: "array",
+              description: "One object per row, keyed by the declared inputs/outputs. Empty for non-circuit (e.g. COAL) problems.",
+              items: {
+                type: "object",
+                additionalProperties: true,
+                example: { A: 0, B: 0, Sum: 0, Carry: 0 },
+              },
+            },
+            equations: {
+              type: "array",
+              items: { type: "string" },
+              example: ["Sum = A ⊕ B", "Carry = A . B"],
+            },
+            hint: { type: "string", example: "Think about what XOR and AND each give you here." },
+            inputs: {
+              type: "array",
+              items: { type: "string" },
+              example: ["A", "B"],
+            },
+            outputs: {
+              type: "array",
+              items: { type: "string" },
+              example: ["Sum", "Carry"],
+            },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        ProblemInput: {
+          type: "object",
+          description: "Request body for creating or updating a problem. `id` is required for create and ignored for update (the path param wins).",
+          required: ["title", "difficulty", "course", "inputs", "outputs"],
+          properties: {
+            id: { type: "integer", example: 5, description: "Required when creating; must not already exist." },
+            listId: { type: "string", example: "DLD-0005", description: "Optional — auto-derived from course + id if omitted." },
+            course: { type: "string", enum: ["dld", "coal"], example: "dld" },
+            title: { type: "string", example: "Half Adder" },
+            difficulty: { type: "string", enum: ["Easy", "Medium", "Hard"], example: "Easy" },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              example: ["Combinational", "Arithmetic"],
+            },
+            topic: { type: "string", example: "arithmetic-circuits" },
+            description: { type: "string", example: "Build a half adder that outputs Sum and Carry for two 1-bit inputs." },
+            truthTable: {
+              type: "array",
+              description: "Leave as [] for non-circuit problems. If supplied, must have exactly 2^inputs.length rows, each keyed by exactly the declared inputs + outputs.",
+              items: {
+                type: "object",
+                additionalProperties: true,
+                example: { A: 0, B: 0, Sum: 0, Carry: 0 },
+              },
+            },
+            equations: {
+              type: "array",
+              items: { type: "string" },
+              example: ["Sum = A ⊕ B", "Carry = A . B"],
+            },
+            hint: { type: "string", example: "Think about what XOR and AND each give you here." },
+            inputs: {
+              type: "array",
+              items: { type: "string" },
+              example: ["A", "B"],
+            },
+            outputs: {
+              type: "array",
+              items: { type: "string" },
+              example: ["Sum", "Carry"],
+            },
+          },
+        },
         SuccessResponse: {
           type: "object",
           properties: {
@@ -176,11 +266,25 @@ const options = {
           },
         },
       },
-      // Note: auth uses httpOnly cookies — no Bearer token needed in Swagger.
-      // The /api/auth/login endpoint sets the cookie automatically.
-      // To test protected routes in Swagger UI, first call /api/auth/login,
-      // then the browser session cookie will be forwarded on subsequent requests
-      // (works when Swagger UI is on the same origin as the API).
+      // Note: cookie-authenticated user routes use httpOnly cookies — no Bearer
+      // token needed in Swagger UI for those. The /api/auth/login endpoint sets
+      // the cookie automatically. To test protected routes in Swagger UI, first
+      // call /api/auth/login, then the browser session cookie will be forwarded
+      // on subsequent requests (works when Swagger UI is on the same origin as
+      // the API).
+      //
+      // securitySchemes below is for the separate /api/internal/* routes, which
+      // are NOT cookie-authenticated — they use a static Bearer token that must
+      // match the CRON_SECRET environment variable (added alongside the new
+      // /api/internal/* Swagger docs).
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          description:
+            "Static bearer token that must equal the CRON_SECRET environment variable. Vercel Cron sends this automatically on scheduled invocations.",
+        },
+      },
     },
   },
   apis: ["./src/routes/*.js"],

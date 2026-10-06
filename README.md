@@ -63,6 +63,18 @@ Run in production mode:
 npm start
 ```
 
+Seed the local problems database:
+
+```bash
+npm run seed:problems
+```
+
+If you are using a local MongoDB instance without a custom URI, the script will default to:
+
+```bash
+mongodb://127.0.0.1:27017/digital-logics-studio
+```
+
 ## Available API Routes
 
 - `GET /` - backend status message

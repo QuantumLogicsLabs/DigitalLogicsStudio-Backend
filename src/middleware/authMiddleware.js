@@ -11,7 +11,7 @@ const { createHttpError } = require("../utils/httpError");
 // req.user built by this middleware previously had `notifications ===
 // undefined`. checkMilestones() and sanitizeUser()'s emailNotificationsOptedOut
 // silently did nothing/returned false because of this.
-const AUTH_SELECT_FIELDS = "_id name email createdAt solvedProblems notifications";
+const AUTH_SELECT_FIELDS = "_id name email createdAt solvedProblems notifications role";
 
 async function protect(req, res, next) {
   try {
@@ -40,4 +40,13 @@ async function protect(req, res, next) {
   }
 }
 
-module.exports = { protect };
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return next(createHttpError(403, "You do not have permission to perform this action."));
+    }
+    next();
+  };
+}
+
+module.exports = { protect, requireRole };
