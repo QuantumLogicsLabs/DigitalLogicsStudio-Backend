@@ -18,7 +18,12 @@ async function protect(req, res, next) {
     const token = req.cookies?.token;
 
     if (!token) {
-      return next(createHttpError(401, "Not authorized. Please log in."));
+      return next(
+        createHttpError(
+          401,
+          "Kindly log in or sign up for a better experience and to save your progress.",
+        ),
+      );
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
