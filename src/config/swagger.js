@@ -85,6 +85,12 @@ const options = {
               items: { type: "string" },
               example: ["boolean-laws"],
             },
+            subtopicReadDays: {
+              type: "object",
+              description: "Day each completed subtopic was marked as read, keyed by subtopic id",
+              additionalProperties: { type: "string" },
+              example: { "boolean-laws": "2026-06-01" },
+            },
             totalSubtopics: { type: "integer", example: 8 },
           },
         },
@@ -96,6 +102,7 @@ const options = {
             solved: { type: "integer", example: 1 },
             topicsCompleted: { type: "integer", example: 0 },
             topicsOpened: { type: "integer", example: 1 },
+            subtopicsCompleted: { type: "integer", example: 2 },
           },
         },
         ActivityLog: {

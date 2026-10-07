@@ -187,7 +187,7 @@ Unauthorized response `401`:
 ```json
 {
   "success": false,
-  "message": "Not authorized. Please log in."
+  "message": "Kindly log in or sign up for a better experience and to save your progress."
 }
 ```
 

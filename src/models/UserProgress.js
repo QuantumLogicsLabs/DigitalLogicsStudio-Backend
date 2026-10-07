@@ -39,6 +39,20 @@ const topicProgressSchema = new mongoose.Schema(
         completedAt: { type: Date, default: null },
         completionPercentage: { type: Number, default: 0 },
         completedSubtopics: { type: [String], default: [] },
+        // Day ("YYYY-MM-DD") each completed subtopic was marked as read, so the
+        // activity calendar can count article reads. Older reads have no entry.
+        subtopicReadDays: {
+            type: [
+                new mongoose.Schema(
+                    {
+                        subtopicId: { type: String, required: true },
+                        dateKey: { type: String, required: true },
+                    },
+                    { _id: false },
+                ),
+            ],
+            default: [],
+        },
         totalSubtopics: { type: Number, default: 0 },
     },
     { _id: false },
