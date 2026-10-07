@@ -9,6 +9,7 @@ const healthRoutes = require("./routes/healthRoutes");
 const progressRoutes = require("./routes/progressRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const internalRoutes = require("./routes/internalRoutes");
+const communityRoutes = require("./routes/communityRoutes");
 const circuitRoutes = require("./routes/circuitRoutes");
 const customComponentRoutes = require("./routes/customComponentRoutes");
 const savedProjectRoutes = require("./routes/savedProjectRoutes");
@@ -131,6 +132,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/internal", internalRoutes);
+app.use("/api/community", communityRoutes);
 app.use("/api/trainer-board", circuitRoutes);
 app.use("/api/custom-components", customComponentRoutes);
 

@@ -2,6 +2,7 @@
 
 const { createHttpError } = require("../utils/httpError");
 const { checkMilestones } = require("../services/notificationService");
+const { firstAttemptAtOf, firstSolvedAtOf } = require("../services/xpService");
 
 const toDateKey = (date = new Date()) =>
   new Date(date).toISOString().slice(0, 10);
@@ -118,6 +119,9 @@ async function completeProblem(req, res, next) {
     entry.status = "solved";
     entry.openedAt = entry.openedAt || new Date();
     entry.solvedAt = entry.solvedAt || new Date();
+    // Stamped once: a later un-mark clears solvedAt, but the XP for solving
+    // this problem stays on the day it was first solved (services/xpService.js).
+    entry.firstSolvedAt = firstSolvedAtOf(entry);
     entry.lastAttemptAt = new Date();
 
     // Legacy flat array still lives on the User doc — update it separately.
@@ -166,6 +170,9 @@ async function uncompleteProblem(req, res, next) {
 
     const entry = progress.getProblemProgress(problemId);
     if (entry.status === "solved") {
+      // Keep the first-solve date before solvedAt is cleared, so a problem
+      // solved before firstSolvedAt existed can't earn its XP a second time.
+      entry.firstSolvedAt = firstSolvedAtOf(entry);
       entry.status = entry.attempts > 0 ? "attempted" : "not_started";
       entry.solvedAt = null;
     }
@@ -200,6 +207,9 @@ async function recordAttempt(req, res, next) {
     const progress = req.progress;
     const entry = progress.getProblemProgress(problemId, subject);
 
+    // Read before attempts/openedAt change below: for a problem never
+    // attempted this is now, for an older record its original first attempt.
+    entry.firstAttemptAt = firstAttemptAtOf(entry) || new Date();
     entry.attempts += 1;
     entry.status = entry.status === "solved" ? "solved" : "attempted";
     entry.openedAt = entry.openedAt || new Date();

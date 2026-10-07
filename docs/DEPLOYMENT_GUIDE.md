@@ -29,6 +29,9 @@ Optional variables:
 ```env
 CLIENT_ORIGIN=https://preview-one.vercel.app,https://preview-two.vercel.app
 FRONTEND_URL=https://alternate-frontend.example.com
+# Turns on POST /api/community/xp for the Quantum Community portal's worker.
+# Must equal DLS_SYNC_SECRET in that worker's .env.
+COMMUNITY_SYNC_SECRET=<a-different-long-random-secret>
 ```
 
 ## CORS and Cookie Requirements
