@@ -126,6 +126,7 @@ on the `User` document, despite some earlier documentation implying an embedded 
   completedAt: Date | null,
   completionPercentage: Number,
   completedSubtopics: [String],
+  subtopicReadDays: [{ subtopicId: String, dateKey: String }], // day each subtopic was marked as read
   totalSubtopics: Number,
 }
 ```

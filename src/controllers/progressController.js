@@ -6,6 +6,39 @@ const { checkMilestones } = require("../services/notificationService");
 const toDateKey = (date = new Date()) =>
   new Date(date).toISOString().slice(0, 10);
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Day an action is logged under. The client sends its local calendar day so
+ * activity lands on the day the user actually saw; it is only trusted when it
+ * is within a day of the server's UTC date (the most a timezone can differ).
+ */
+function resolveDateKey(body = {}) {
+  const { dateKey } = body;
+  if (typeof dateKey === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    const drift = Math.abs(Date.parse(dateKey) - Date.parse(toDateKey()));
+    if (drift <= DAY_MS) return dateKey;
+  }
+  return toDateKey();
+}
+
+/**
+ * Day each completed subtopic was read, keyed by subtopic id. Reads saved
+ * before read days were recorded fall back to the day the topic was opened.
+ */
+function getSubtopicReadDays(entry) {
+  const recorded = new Map(
+    (entry.subtopicReadDays || []).map((r) => [r.subtopicId, r.dateKey]),
+  );
+  const fallback = entry.openedAt ? toDateKey(entry.openedAt) : null;
+  const readDays = {};
+  (entry.completedSubtopics || []).forEach((id) => {
+    const dateKey = recorded.get(id) || fallback;
+    if (dateKey) readDays[id] = dateKey;
+  });
+  return readDays;
+}
+
 const makeEventId = (type) =>
   `${type}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
@@ -73,7 +106,7 @@ async function completeProblem(req, res, next) {
     const problemId = parsePositiveProblemId(req.params.problemId);
 
     const { title, tags, topicId, subject } = readProgressPayload(req.body);
-    const dateKey = toDateKey();
+    const dateKey = resolveDateKey(req.body);
     const progress = req.progress;
     const entry = progress.getProblemProgress(problemId, subject);
 
@@ -163,7 +196,7 @@ async function recordAttempt(req, res, next) {
     const problemId = parsePositiveProblemId(req.params.problemId);
 
     const { title, tags, topicId, subject } = readProgressPayload(req.body);
-    const dateKey = toDateKey();
+    const dateKey = resolveDateKey(req.body);
     const progress = req.progress;
     const entry = progress.getProblemProgress(problemId, subject);
 
@@ -205,7 +238,7 @@ async function openTopic(req, res, next) {
   try {
     const { topicId } = req.params;
     const { title, totalSubtopics, subject } = readProgressPayload(req.body);
-    const dateKey = toDateKey();
+    const dateKey = resolveDateKey(req.body);
     const progress = req.progress;
     const entry = progress.getTopicProgress(topicId, subject);
 
@@ -248,7 +281,7 @@ async function toggleSubtopic(req, res, next) {
     const { topicId, subtopicId } = req.params;
     const { title, totalSubtopics, subject } = readProgressPayload(req.body);
     const equivalentSubtopicIds = req.body?.equivalentSubtopicIds || [];
-    const dateKey = toDateKey();
+    const dateKey = resolveDateKey(req.body);
     const progress = req.progress;
     const entry = progress.getTopicProgress(topicId, subject);
 
@@ -263,12 +296,17 @@ async function toggleSubtopic(req, res, next) {
     );
     const isCompleted = equivalentIds.some((id) => completed.has(id));
 
+    const readDays = entry.subtopicReadDays.filter(
+      (r) => !equivalentIds.includes(r.subtopicId),
+    );
     if (isCompleted) {
       equivalentIds.forEach((id) => completed.delete(id));
     } else {
       completed.add(subtopicId);
+      readDays.push({ subtopicId, dateKey });
     }
     entry.completedSubtopics = Array.from(completed);
+    entry.subtopicReadDays = readDays;
 
     const wasCompleted = entry.status === "completed";
     refreshTopicCompletion(entry);
@@ -332,6 +370,7 @@ async function getSnapshot(req, res, next) {
         completedAt: t.completedAt,
         completionPercentage: t.completionPercentage,
         completedSubtopics: t.completedSubtopics,
+        subtopicReadDays: getSubtopicReadDays(t),
         totalSubtopics: t.totalSubtopics,
         title: t.title,
         subject: t.subject || "dld",
@@ -345,7 +384,25 @@ async function getSnapshot(req, res, next) {
         solved: d.solved,
         topicsCompleted: d.topicsCompleted,
         topicsOpened: d.topicsOpened,
+        subtopicsCompleted: 0,
       };
+    });
+
+    // Article reads aren't stored in activityLog — count them per day from
+    // each topic's read days so un-marking a subtopic removes it again.
+    Object.values(topics).forEach((t) => {
+      Object.values(t.subtopicReadDays).forEach((dateKey) => {
+        if (!activity[dateKey]) {
+          activity[dateKey] = {
+            attempts: 0,
+            solved: 0,
+            topicsCompleted: 0,
+            topicsOpened: 0,
+            subtopicsCompleted: 0,
+          };
+        }
+        activity[dateKey].subtopicsCompleted += 1;
+      });
     });
 
     res.status(200).json({
