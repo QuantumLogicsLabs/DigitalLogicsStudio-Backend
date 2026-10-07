@@ -42,6 +42,9 @@ Do not send JWTs through localStorage or manually attach bearer tokens unless th
 - `/api/internal/*` — ignores the login cookie entirely. Requires
   `Authorization: Bearer <CRON_SECRET>`, checked by `internalAuth`. This group is for
   the Vercel Cron job (and manual ops calls), not the frontend.
+- `/api/community/*` — also ignores the login cookie. Requires
+  `Authorization: Bearer <COMMUNITY_SYNC_SECRET>`, checked by `communityAuth`. This
+  group is for the Quantum Community portal's worker, not the frontend.
 
 ## Health
 
@@ -604,6 +607,57 @@ Response:
 
 Narrower endpoint — only retries the email queue, skipping the inactivity check and
 digest.
+
+## Community Endpoints (`/api/community`) — Server-to-Server, Not Frontend-Facing
+
+Auth: `Authorization: Bearer <COMMUNITY_SYNC_SECRET>` via `communityAuth`. With the env
+var unset every route here answers `503`, so the integration is off until it is
+configured. The secret is separate from `CRON_SECRET` on purpose — it can only read XP.
+
+### `POST /api/community/xp`
+
+Per-day XP for a batch of accounts, looked up by email. The Quantum Community portal's
+contribution-worker polls this and converts the XP into quantum points on its side.
+
+XP follows the rule the Problems page shows: **30 XP** the first time a problem is
+attempted and **100 XP** the first time it is solved. Each is earned once per problem
+and dated on the day it happened — un-marking a problem and solving it again does not
+earn or move it (see `services/xpService.js`).
+
+Request (at most 100 emails; `since` and `tzOffsetMinutes` are optional):
+
+```json
+{
+  "emails": ["member@example.com"],
+  "since": "2025-10-07",
+  "tzOffsetMinutes": 300
+}
+```
+
+`tzOffsetMinutes` is the calendar days are cut on, in minutes east of UTC (300 =
+Pakistan time, the portal's calendar). `since` is an inclusive lower bound in that
+calendar. It is a `POST` so email addresses never appear in a URL.
+
+Response — emails with no account are omitted, and `totalXp` is lifetime regardless of
+`since`:
+
+```json
+{
+  "success": true,
+  "generatedAt": "2026-10-07T09:00:00.000Z",
+  "tzOffsetMinutes": 300,
+  "xpRules": { "attempted": 30, "solved": 100 },
+  "accounts": [
+    {
+      "email": "member@example.com",
+      "totalXp": 430,
+      "days": [{ "date": "2026-10-07", "xp": 130, "attempted": 1, "solved": 1 }]
+    }
+  ]
+}
+```
+
+Errors: `400` malformed body, `401` missing/incorrect bearer, `503` secret not configured.
 
 ## Error Responses
 

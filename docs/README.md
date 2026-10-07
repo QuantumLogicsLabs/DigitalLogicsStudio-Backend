@@ -72,6 +72,9 @@ breadboard/IC tool from Boolforge; Boolforge circuits are client-side only
 **Internal** (`/api/internal`, bearer `CRON_SECRET` only — not for frontend use)
 - `GET /run-daily-jobs`, `POST /run-daily-jobs`, `POST /process-email-queue`
 
+**Community** (`/api/community`, bearer `COMMUNITY_SYNC_SECRET` only — server-to-server)
+- `POST /xp` — per-day XP by email, polled by the Quantum Community portal's worker
+
 ## Notes on Implementation Status
 
 - **Problems CRUD is backend-only right now.** The API and its role-gating work, but

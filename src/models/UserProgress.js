@@ -20,6 +20,11 @@ const problemProgressSchema = new mongoose.Schema(
         openedAt: { type: Date, default: null },
         lastAttemptAt: { type: Date, default: null },
         solvedAt: { type: Date, default: null },
+        // Set once and never cleared, unlike solvedAt (un-marking a problem
+        // resets that). XP is dated on these, so it is earned once per problem
+        // and can't be re-earned by toggling — see services/xpService.js.
+        firstAttemptAt: { type: Date, default: null },
+        firstSolvedAt: { type: Date, default: null },
     },
     { _id: false },
 );

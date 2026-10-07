@@ -6,6 +6,12 @@ This project follows a human-readable changelog format. Version numbers should a
 
 ### Added
 
+- `POST /api/community/xp` — per-day XP by email for the Quantum Community portal's
+  contribution-worker, guarded by a new `COMMUNITY_SYNC_SECRET` bearer (`503` while
+  unset). XP is 30 per first attempt and 100 per first solve, the Problems page's rule.
+- `firstAttemptAt` / `firstSolvedAt` on `UserProgress.problemProgress`, set once and
+  never cleared, so XP is earned once per problem and cannot be re-earned by un-marking
+  and re-solving. `services/xpService.js` derives a day's XP from them.
 - `PATCH /api/auth/profile` — update display name and/or avatar (base64 data URL) for
   the logged-in user. New `User.avatarUrl` field. Mounted with a route-scoped 8MB JSON
   body limit (`src/app.js`) to accommodate base64-encoded photos without loosening the

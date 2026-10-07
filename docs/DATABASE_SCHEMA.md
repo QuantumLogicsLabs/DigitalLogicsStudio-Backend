@@ -110,9 +110,16 @@ on the `User` document, despite some earlier documentation implying an embedded 
   attempts: Number,
   openedAt: Date | null,
   lastAttemptAt: Date | null,
-  solvedAt: Date | null,
+  solvedAt: Date | null,          // cleared when a problem is un-marked
+  firstAttemptAt: Date | null,    // set once, never cleared
+  firstSolvedAt: Date | null,     // set once, never cleared
 }
 ```
+
+`firstAttemptAt` and `firstSolvedAt` are what XP is dated on (`services/xpService.js`:
+30 XP for the first attempt at a problem, 100 for the first solve). Because they are
+never cleared, un-marking a problem and solving it again cannot earn its XP twice.
+Records saved before these fields existed fall back to `openedAt` and `solvedAt`.
 
 ### TopicProgress
 

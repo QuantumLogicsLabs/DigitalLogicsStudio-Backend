@@ -39,6 +39,7 @@ Required variables:
 | `JWT_SECRET` | Yes | long random string | Must be high entropy and unique per environment. |
 | `JWT_EXPIRES_IN` | No | `7d` | Passed to `jsonwebtoken.sign`. |
 | `COOKIE_EXPIRES_DAYS` | No | `7` | Controls auth cookie lifetime. |
+| `COMMUNITY_SYNC_SECRET` | No | long random string | Bearer for `POST /api/community/xp` (the Quantum Community XP sync). Unset keeps that endpoint off. |
 
 ## Start Development Server
 

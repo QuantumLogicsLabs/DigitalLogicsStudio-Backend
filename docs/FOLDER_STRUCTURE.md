@@ -164,6 +164,12 @@ Normalizes 404 and thrown errors into JSON responses.
 Guards `/api/internal/*` with a static bearer token compared against `CRON_SECRET` —
 unrelated to `protect`/user sessions.
 
+### `communityAuth.js`
+
+Guards `/api/community/*` with a static bearer token compared against
+`COMMUNITY_SYNC_SECRET` (its own secret, not `CRON_SECRET`). Answers `503` while the
+env var is unset.
+
 ### `loadUserProgress.js`
 
 Attaches `req.progress` (the user's `UserProgress` doc, created on first access). Only
@@ -207,6 +213,7 @@ scanned by `swagger-jsdoc` for `@swagger` JSDoc blocks.
 | `circuitRoutes.js` | `/api/trainer-board` | `protect` on all |
 | `aiRoutes.js` | `/api/ai` | `requireAiAuth` + `aiChatRateLimiter` on all |
 | `internalRoutes.js` | `/api/internal` | `internalAuth` (bearer `CRON_SECRET`) on all |
+| `communityRoutes.js` | `/api/community` | `communityAuth` (bearer `COMMUNITY_SYNC_SECRET`) on all |
 
 ## `src/services`
 
@@ -218,6 +225,12 @@ scanned by `swagger-jsdoc` for `@swagger` JSDoc blocks.
 ### `notificationService.js`
 
 Trigger logic for all four notification types — see `EMAIL_NOTIFICATIONS.md`.
+
+### `xpService.js`
+
+The XP rule (30 per first attempt, 100 per first solve) and `buildDailyXp`, which
+derives a user's XP per day from the `firstAttemptAt` / `firstSolvedAt` stamps on their
+problem progress. Nothing is stored — see `DATABASE_SCHEMA.md`.
 
 ### `scheduler.js`
 
